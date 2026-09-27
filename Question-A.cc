@@ -39,6 +39,7 @@
 #include <fstream>  
 #include <string>
 #include <vector>
+#include <cstdint>
 
 // One output row.
 struct Row {
