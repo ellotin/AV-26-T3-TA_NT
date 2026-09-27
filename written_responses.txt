@@ -1,7 +1,7 @@
 IMPORTANT NOTE PLEASE READ!:
 I have a full word/pdf document detailing my whole thought process, error encounters and manual
 estimate calculations of certain variables. this can be seen in the word document called:
-"Redback Racing Notes by Noah Taylor". Thank you!
+"Redback Racing Notes". Thank you!
 
 ### Part A - recover the data (CAN decode)
 
