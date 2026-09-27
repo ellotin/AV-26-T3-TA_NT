@@ -12,14 +12,56 @@
 struct Plant {
     // add whatever state your model needs (velocity, motor-side angle, ...)
     double angle = 0.0;
+    double current_rate = 0.0;
+
+    double K = 1.286;
+    double tau = 0.075;
+
+    double deadzone = 2.0;
+    double slack = 0.0;
+  
 
     // u_cmd : commanded velocity, deg/s
     // dt    : timestep, seconds
     // return: measured output angle, deg
     double step(double u_cmd, double dt) {
-        angle += u_cmd * dt;                   // placeholder dynamics -- replace this
+
+        slack +=u_cmd*dt;
+
+        double u_eff = 0;
+
+        if (slack>deadzone){
+
+            u_eff=u_cmd;
+            
+            slack=deadzone;
+        }
+       
+        
+        else if(slack<-deadzone){
+            u_eff=u_cmd;
+
+            slack=-deadzone;
+        }
+        
+        else{
+            u_eff = 0.0;
+        }
+
+        
+        double target_rate= K * u_eff;        
+        current_rate+=(dt/tau) * (target_rate-current_rate);
+
+        angle += current_rate * dt;
+
         return std::round(angle / 0.1) * 0.1;  // the sensor reads to 0.1 deg
     }
 
-    void reset() { angle = 0.0; }
+    void reset() { 
+        
+        current_rate=0.0;
+        angle = 0.0;
+        
+        slack = 0.0;
+    }
 };

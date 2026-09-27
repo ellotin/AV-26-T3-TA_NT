@@ -26,17 +26,17 @@
 // what formats are used to represent values, etc.
 // Resources:
 // https://www.csselectronics.com/pages/can-bus-simple-intro-tutorial
-// https://www.csselectronics.com/pages/can-dbc-file-database-intro
+// https://www.csselectronics.com/pages/can-dbc-fi  le-database-intro
 //
 // Sanity check: plot your CSVs (python3 plot_data.py) and compare against the pre-plotted
 // data/*.png files -- they should match.
 //
 // Build & run (from the TA/ folder):
-//     c++ -std=c++17 Question-A.cc -o decode
+//     c++ -std=c++17`Question-A.cc -o decode
 //     ./decode
 
 #include <cstdio>
-#include <fstream>
+#include <fstream>  
 #include <string>
 #include <vector>
 
@@ -53,7 +53,47 @@ std::vector<Row> decodeLog(const std::string& path) {
     std::vector<Row> rows;
 
     // TODO: your code here
-    (void)path;  // remove once you open the file
+    std::ifstream file(path);
+
+    double times_start = -1.0;
+
+    std::string datastorage;
+    while (std::getline(file,datastorage)){
+
+        size_t ID_Position = datastorage.find(" 200#");
+
+        if (ID_Position == std::string::npos){
+            
+            continue; 
+        }
+        
+        size_t Timestamp_start = datastorage.find('(');
+        size_t Timestamp_end = datastorage.find(')');
+        std::string timestamp_log = datastorage.substr(Timestamp_start+1, Timestamp_end-Timestamp_start-1);
+        double timestamp_raw = std::stod(timestamp_log);
+
+        std::string hex_data = datastorage.substr(ID_Position+5);
+
+
+        if (times_start<0){
+
+            times_start=timestamp_raw;
+
+        }
+
+        double relative_time = timestamp_raw - times_start;
+
+        std::string y_hexpairs = hex_data.substr(2,2) + hex_data.substr(0,2);
+        int16_t y_raw = static_cast<int16_t>(std::stoi(y_hexpairs,nullptr,16));
+        double y_measured = y_raw*0.1;
+
+        std::string u_hexpairs = hex_data.substr(6,2) + hex_data.substr(4,2);
+        int16_t u_raw = static_cast<int16_t>(std::stoi(u_hexpairs,nullptr,16));
+        double u_commanded = u_raw*0.1;
+
+        rows.push_back({relative_time,u_commanded,y_measured});
+
+    }
 
     return rows;
 }

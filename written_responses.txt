@@ -1,4 +1,9 @@
+IMPORTANT NOTE PLEASE READ!:
+I have a full word document detailing 
+
 ### Part A - recover the data (CAN decode)
+
+To recover the CAN Bus data
 
 Frame ID kept:
 
