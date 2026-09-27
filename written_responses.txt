@@ -1,25 +1,112 @@
 IMPORTANT NOTE PLEASE READ!:
-I have a full word document detailing 
+I have a full word/pdf document detailing my whole thought process, error encounters and manual
+estimate calculations of certain variables. this can be seen in the word document called:
+"Redback Racing Notes by Noah Taylor". Thank you!
 
 ### Part A - recover the data (CAN decode)
 
-To recover the CAN Bus data
+To recover the CAN Bus data, I first looked into the log file to see what we are working with, what I found odd
+is that there were so many different values, but what stood out to me, is that 
+some of the vales were consistent, especially the value, 200 highlighted in blue.
+Thus I looked into the dbc file, otherwise know as the manual of the log file which
+ was able to tell me what values I needed to know to help decode.
+ by doing this, i was able to find the value, 512 which when decoded, gives
+me the CAN ID of 0x200, which said that every CAN Log in the log file with the ID, 200, must be extracted
+and translated. The values from the dbc file were extracted and implemented into my code in Question-A.cc 
+to create a program that will decode the log and put the translated log file into a csv file.
 
+An error I have encountered was knowing the theory of how these logs are decoded.
+
+for example, a promininet challenge was acquiring the data itself.
+Thus, the ability to grab the data from the logs and translate it without overusing RAM or crashing the system.
+To combat this, I was able to implement an input filestream function or "ifstream" instead of doing std:Vector
+which would just dump the whole log and crash the system. So bassically reading the data sequentially than
+all at once.
+
+Another classic error was attempting to continue the loop for checking the ID, but the problem was,
+if it encountered an error, the program would just break. This led me into discovering the function(npos)
+which meant "no position." THis basically helped say that if the ID POsition of 200 observed is not there,
+then it woould return an invalid position, then outside the if brackets after the if, a continue function was placed
+which continues the loop. This acted like a smart filter.
+
+By going through these errors whilst coding the translator, I was able to create the csv file.
+
+I created the graphs files and compared  them against the actual one using plot_data.py. 
+My plotted data perfectly matched the given data, which was a resounding success.
 Frame ID kept:
+
+BO_ 512 STEER_ActuatorLog: 8 Vector__XXX (We also include this as it helps us find out the CAN ID)
 
 Signal 1 (u_commanded):  byte position / endianness / signed? / scale / offset:
 Signal 2 (y_measured):   byte position / endianness / signed? / scale / offset:
-
-Notes (anything odd in the logs, how you checked the decode against the PNGs):
-
+ SG_ MeasuredAngle : 0|16@1- (0.1,0) [0|0] "deg" Vector__XXX
+ SG_ CmdAngularRate : 16|16@1- (0.1,0) [0|0] "deg/s" Vector__XXX
 
 
 ### Part B - identify system
 
+In this Part, we must simulate the calculated data into a performace graph so we can identify any anomalies. First we calculated 
+the K and tau in which was manually calculated (can be seen in the pdf pages 20-21) and deadzone, which was found in the deadband_test_yours.png.
+First i properly defined the values (k, tau, angle, angle rate deadzone), especially, slack which was the memory of where the actuator mechanism is. 
+This helped simulate a realisitic driving environment by ensuring that the output is smooth change in output (more on this in the error).
+Then 3 conditional statements were created to calculate whether the input has surpassed the dedadzone (in positive and negative respesctively)
+or if it has not to ensure the mechanism actually ooutputs something when it surpasses it.
+Now an equation was created to claculate the target_rate as scaled by the K value (multiplied together) which helped the motor reach its target as k
+adjusts with the motors ability. And now we use this rate to find the current rate which was accomplished by dividing the timestep by tau and 
+multiplying that by target rate minus current rate. By doing this, it ensures that as time goes on, the current rate and target rate 
+gap will get closer if so, thus the "+=" so it adds on. (Full analyses of deadzone graph and estimated calculations can be found from pages 18-23)
 
+A problem encountered in this code was forgetting slack. Without slack, the motors would turn off instantaneously and off as it crosses
+and goes below the deadzone threshold. Furthemore, if the command signal hovers over the 2 threshold, itwill violently snap between on and off
+becausethats all it knows. So by adding slack, we are simulating real actuator motion.
+
+Another error to acknowledge is that i have overestimated the tau with my calculation.
+My estiate was 0.1895 sec, but the actual tau (which was found through trial and error checks by changing the value up and down
+which was also slightly down with the k value (from 1.22 to 1.286)) was 0.075. this is an error percentage of around 153%!!
+This is also most likely due to my very simple approach of estimating tau by subtracting the idealistic and realisitc degrees 
+achieved in the timeframe and dividing that by the steady state velocity (Full calculatins on 20-21 in word/pdf doc).
+This was overcome by tweaking the values in plant.hpp.
 
 ### Part C - control design choices
+
+Now to actually code the controller. A PID controller helps regulate the controller outputs and inputs which helps prevent 
+overshooting or undershooting the target by regulating the speed of the mechanism turnign the wheel from its intial to its target
+position. They do this by implementing three variables, proportional, which scales the speed of the mechanism at
+the current error so the wheel so it can hit its target approriately without over or undershooting.
+The integral, which builds error overtime and assits the wheel to turn to its target effeciently
+if stuck short of the target. Finally, deritative which predicts future error as it calcualtes how fast you are approaching the target.
+With this synchorinization of the three variables, a steady autonomous controller can be achieved. 
+
+(The full process of the code can be viewed in the doc 29-32)
+
+Note: An integral limit was also implemented because integral is infamous for building error overtime, and without a limit,
+it would continously build up error overtime and cause integral windup, which is when a motors hits it maximum limit but the integral
+keeps on pushing which would cause severe overshoots.
+
+An error which prevented me from even starting this was accurately valueing the PID terms and integral limit. First I wrote all the code
+out with random values in the 4 variables and decided to just do trial and error. But this worked to no avail. So I tried to search
+up alternative solution until I came across the strategy called heuristic tuning. This is a very useful method that is used to 
+adjust the parametres of a system to reach its ideal values. 
+
+Briefly:
+1. I set all the 3 other variables to zero whilst keeping K at a low starting point (1.0).
+2. Then I go up in increments of doubling until it gave me a proper value where the the graph reaches steady oscillation
+3. Now then, I add integral as a non zero starting value and repeat the same, Looking for visual cues that flatten the once oscillating
+line to its target.
+4. Then I add the deritative and executed the same, looking for a clean flat line.
+5. For the Integral limit, I simply brute-force trial and errored it but went up by integrals (1,2,4,8,16,32) until my overshooting
+data was stable enough.
+
+An error encountered during the program was not realising we even needed a limit. Thus, as said, would cause integral windup
+and also causue actual physical harm to the motor because its forcing it to operate at the absolutet max limit for a prolonged
+period of time. Thus simple limit of 50 was established,
+
+
+
 
 
 
 ### Part D - reflection
+
+This task was incredibly difficult and a challenging. But I was able to learn a significant amount of  knowledge into the 
+automation industry. I am determined to keep on expanding my experience into this field.
