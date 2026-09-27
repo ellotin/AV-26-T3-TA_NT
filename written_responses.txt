@@ -108,5 +108,8 @@ period of time. Thus simple limit of 50 was established,
 
 ### Part D - reflection
 
+Seeing that there was still overshoot of +0.3 for large move and 0.1 for reversal and on-centre trim, further analyses mjust be conducted
+to improve on the model. An example for improvement can be tweaking the PID values further to see if it can at least trim down the error
+between the target and measured.
 This task was incredibly difficult and a challenging. But I was able to learn a significant amount of  knowledge into the 
 automation industry. I am determined to keep on expanding my experience into this field.
